@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "utils/supabase/server";
-import Logout from "../logout/page";
+import { logout } from "../actions/logout";
+import { deleteAccount } from "../actions/deleteAccount";
 
 export default async function Dashboard() {
   const supabase = await createClient();
@@ -14,7 +15,8 @@ export default async function Dashboard() {
   return (
     <div>
       <p>Hello {data.user.email}</p>
-      <Logout />
+      <button onClick={logout}>Logout</button>
+      <button onClick={deleteAccount}>Delete Account</button>
     </div>
   );
 }
