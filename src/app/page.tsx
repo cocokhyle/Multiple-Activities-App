@@ -3,7 +3,8 @@ import LoginPage from "./login/page";
 
 import { createClient } from "utils/supabase/server";
 import { redirect } from "next/navigation";
-import Dashboard from "./dashboard/page";
+import Header from "@/components/header/page";
+import TodoList from "@/pages/todo-list/page";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -15,7 +16,8 @@ export default async function Home() {
 
   return (
     <div>
-      <Dashboard />
+      <Header />
+      <TodoList />
     </div>
   );
 }
