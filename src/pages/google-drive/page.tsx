@@ -1,10 +1,10 @@
 "use client";
 
-import { uploadImage } from "utils/supabase/storage/client";
+import { uploadImage } from "utils/supabase/storage/google-drive-lite/client";
 import { ChangeEvent, useRef, useState, useTransition } from "react";
 import { convertBlobUrlToFile } from "@/lib/utils";
 import Image from "next/image";
-import ImageGallery from "@/components/image-gallery/ImageGallery";
+import ImageGallery from "@/components/image-gallery/google-drive-lite/ImageGallery";
 
 export default function GoogleDriveLite() {
   const [imageUrls, setImageUrls] = useState<{ url: string; name: string }[]>(

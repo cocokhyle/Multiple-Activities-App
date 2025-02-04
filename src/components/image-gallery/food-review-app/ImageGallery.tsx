@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "utils/supabase/client";
-import { deleteImage, updateImage } from "utils/supabase/storage/client"; // Import the update function
+import {
+  deleteImage,
+  updateImage,
+} from "utils/supabase/storage/food-review-app/client"; // Import the update function
 
 const supabase = await createClient();
 
@@ -18,7 +21,7 @@ const ImageGallery = () => {
   useEffect(() => {
     const fetchImages = async () => {
       const { data, error } = await supabase.storage
-        .from("google-drive-lite")
+        .from("food-review-app")
         .list();
 
       if (error) {
@@ -29,7 +32,7 @@ const ImageGallery = () => {
       // Fetch image URLs and names
       const imagesData = data.map((file) => {
         const url = supabase.storage
-          .from("google-drive-lite")
+          .from("food-review-app")
           .getPublicUrl(file.name).data.publicUrl;
 
         // Assuming the filename contains a timestamp (e.g., 1645012312-image-name.png)
@@ -80,7 +83,7 @@ const ImageGallery = () => {
     const { error } = await updateImage(
       imageToDeleteUrl,
       selectedImage,
-      "google-drive-lite"
+      "food-review-app"
     );
 
     if (error) {
@@ -88,7 +91,7 @@ const ImageGallery = () => {
     } else {
       // After successful update, immediately update the state with the new image URL
       const updatedImageUrl = supabase.storage
-        .from("google-drive-lite")
+        .from("food-review-app")
         .getPublicUrl(selectedImage.name).data.publicUrl;
 
       setImages((prevImages) =>
