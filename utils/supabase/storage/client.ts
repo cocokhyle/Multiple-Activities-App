@@ -48,13 +48,29 @@ export const uploadImage = async ({ file, bucket, folder }: UploadProps) => {
 };
 
 export const deleteImage = async (imageUrl: string) => {
-  const bucketAndPathString = imageUrl.split("/storage/v1/object/public/")[1];
+  // Check if the imageUrl contains the expected substring
+  const splitParts = imageUrl.split("/storage/v1/object/public/");
+
+  if (splitParts.length < 2) {
+    console.error("Error: Invalid image URL format", imageUrl);
+    return { error: "Invalid image URL format" };
+  }
+
+  const bucketAndPathString = splitParts[1]; // Extract the bucket and path part
   const firstSlashIndex = bucketAndPathString.indexOf("/");
+
+  if (firstSlashIndex === -1) {
+    console.error("Error: No path found in image URL", imageUrl);
+    return { error: "No path found in image URL" };
+  }
 
   const bucket = bucketAndPathString.slice(0, firstSlashIndex);
   const path = bucketAndPathString.slice(firstSlashIndex + 1);
 
   const storage = getStorage();
+
+  // Log the bucket and path for debugging
+  console.log("Bucket:", bucket, "Path:", path);
 
   const { data, error } = await storage.from(bucket).remove([path]);
 
@@ -66,6 +82,20 @@ export const updateImage = async (
   newFile: File,
   bucket: string
 ) => {
-  await deleteImage(oldImageUrl); // Delete old image
-  return await uploadImage({ file: newFile, bucket }); // Upload new image with same name
+  try {
+    // Delete the old image
+    await deleteImage(oldImageUrl);
+
+    // Upload the new image with the same name
+    const { imageUrl, error } = await uploadImage({ file: newFile, bucket });
+
+    if (error) {
+      return { error: error };
+    }
+
+    return { imageUrl, error }; // return the imageUrl and error from the uploadImage function
+  } catch (error) {
+    console.error("Error updating image:", error);
+    return { error: "Error updating image" };
+  }
 };
