@@ -5,6 +5,7 @@ import { createClient } from "utils/supabase/server";
 import { redirect } from "next/navigation";
 import Header from "@/components/header/page";
 import TodoList from "@/pages/todo-list/page";
+import GoogleDriveLite from "@/pages/google-drive/page";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -17,7 +18,7 @@ export default async function Home() {
   return (
     <div>
       <Header />
-      <TodoList />
+      <GoogleDriveLite />
     </div>
   );
 }

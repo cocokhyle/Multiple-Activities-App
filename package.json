@@ -14,9 +14,11 @@
     "@supabase/supabase-js": "^2.48.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/next-auth": "^3.13.0",
+    "browser-image-compression": "^2.0.2",
     "next": "15.1.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@types/node": "^20",
