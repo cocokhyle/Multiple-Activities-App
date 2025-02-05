@@ -17,6 +17,30 @@ const ImageGallery = () => {
   const [sortBy, setSortBy] = useState<"name" | "date">("name");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imageToUpdate, setImageToUpdate] = useState<string | null>(null); // Image to update
+  const [reviews, setReviews] = useState<
+    Record<string, { id: string; user_email: string; review: string }[]>
+  >({});
+
+  const [reviewText, setReviewText] = useState<Record<string, string>>({});
+  const [editingReview, setEditingReview] = useState<Record<string, string>>(
+    {}
+  );
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        if (user.email) {
+          setUserEmail(user.email);
+        }
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -50,8 +74,148 @@ const ImageGallery = () => {
     };
 
     fetchImages();
-  }, [images]); // Adding `images` as a dependency will trigger re-fetching when images state changes.
+  }, [images]);
 
+  //fetch reviews
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("food_reviews")
+          .select("id, user_email, image_name, review");
+
+        if (error) throw error;
+
+        const reviewsMap: Record<
+          string,
+          { id: string; user_email: string; review: string }[]
+        > = {};
+
+        data.forEach(({ id, image_name, user_email, review }) => {
+          if (!reviewsMap[image_name]) reviewsMap[image_name] = [];
+          reviewsMap[image_name].push({ id, user_email, review });
+        });
+
+        setReviews(reviewsMap);
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
+  //Handle Save Review
+  const handleSaveReview = async (imageName: string) => {
+    if (!reviewText[imageName]) {
+      alert("Please enter a review before saving.");
+      return;
+    }
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const userEmail = user?.email;
+
+      if (!userEmail) {
+        alert("User not logged in!");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("food_reviews")
+        .insert([
+          {
+            user_email: userEmail,
+            image_name: imageName,
+            review: reviewText[imageName],
+          },
+        ])
+        .select();
+
+      if (error) throw error;
+
+      setReviews((prevReviews) => ({
+        ...prevReviews,
+        [imageName]: [
+          ...(prevReviews[imageName] || []),
+          {
+            id: data[0].id,
+            user_email: userEmail,
+            review: reviewText[imageName],
+          },
+        ],
+      }));
+
+      setReviewText((prev) => ({ ...prev, [imageName]: "" }));
+
+      alert("Review saved successfully!");
+    } catch (error) {
+      console.error("Error saving review:", error);
+      alert("Error saving review");
+    }
+  };
+
+  //Handle Update review
+  const handleUpdateReview = async (reviewId: string, imageName: string) => {
+    const updatedReview = editingReview[reviewId];
+    if (!updatedReview.trim()) {
+      alert("Review cannot be empty.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("food_reviews")
+        .update({ review: updatedReview })
+        .eq("id", reviewId);
+
+      if (error) throw error;
+
+      setReviews((prevReviews) => ({
+        ...prevReviews,
+        [imageName]: prevReviews[imageName].map((r) =>
+          r.id === reviewId ? { ...r, review: updatedReview } : r
+        ),
+      }));
+
+      setEditingReview((prev) => {
+        const updatedState = { ...prev };
+        delete updatedState[reviewId];
+        return updatedState;
+      });
+
+      alert("Review updated successfully!");
+    } catch (error) {
+      console.error("Error updating review:", error);
+      alert("Error updating review");
+    }
+  };
+
+  //Handle delete reviews
+  const handleDeleteReview = async (reviewId: string, imageName: string) => {
+    try {
+      const { error } = await supabase
+        .from("food_reviews")
+        .delete()
+        .eq("id", reviewId);
+
+      if (error) throw error;
+
+      setReviews((prevReviews) => ({
+        ...prevReviews,
+        [imageName]: prevReviews[imageName].filter((r) => r.id !== reviewId),
+      }));
+
+      alert("Review deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      alert("Error deleting review");
+    }
+  };
+
+  //Handle delete Image
   const handleDelete = async (imageUrl: string) => {
     console.log("Attempting to delete image with URL:", imageUrl);
 
@@ -65,6 +229,7 @@ const ImageGallery = () => {
     }
   };
 
+  //Handle delete image
   const handleUpdate = async () => {
     if (!selectedImage || !imageToUpdate) {
       console.error("No image selected for update.");
@@ -165,6 +330,69 @@ const ImageGallery = () => {
           <div key={path} className="flex flex-col items-center">
             <img src={url} alt={name} className="w-full h-auto rounded-lg" />
             <span>{name}</span>
+
+            {/* Display reviews under the image */}
+            <div className="mt-2 w-full p-2 border rounded bg-gray-100">
+              <h3 className="font-semibold">Reviews:</h3>
+              {reviews[name]?.length > 0 ? (
+                reviews[name].map(({ id, user_email, review }) => (
+                  <div key={id} className="p-1 border-b">
+                    <p className="text-sm text-gray-600">{user_email}</p>
+                    {userEmail !== user_email && (
+                      <p className="text-gray-800">{review}</p>
+                    )}
+                    {userEmail === user_email && (
+                      <div>
+                        <input
+                          type="text"
+                          defaultValue={review}
+                          onBlur={(e) =>
+                            setEditingReview({
+                              ...editingReview,
+                              [id]: e.target.value,
+                            })
+                          }
+                          className="border rounded p-1 text-gray-800 w-full"
+                        />
+                        <div>
+                          <button
+                            onClick={() => handleUpdateReview(id, name)}
+                            className="bg-blue-600 text-white py-1 px-3 mt-2 rounded"
+                          >
+                            Update
+                          </button>
+                          <button
+                            onClick={() => handleDeleteReview(id, name)}
+                            className="bg-red-600 text-white py-1 px-3 mt-2 rounded"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No reviews yet.</p>
+              )}
+            </div>
+
+            {/* Review input field */}
+            <textarea
+              value={reviewText[name] || ""}
+              onChange={(e) =>
+                setReviewText({ ...reviewText, [name]: e.target.value })
+              }
+              placeholder="Write a review..."
+              className="mt-2 p-2 border rounded w-full"
+            />
+            <button
+              onClick={() => handleSaveReview(name)}
+              className="bg-blue-600 text-white py-1 px-3 mt-2 rounded"
+            >
+              Save Review
+            </button>
+
             <button
               onClick={() => handleDelete(url)}
               className="bg-red-600 text-white py-1 px-3 mt-2 rounded"
@@ -172,7 +400,7 @@ const ImageGallery = () => {
               Delete
             </button>
             <button
-              onClick={() => setImageToUpdate(path)} // Set image for update
+              onClick={() => setImageToUpdate(path)}
               className="bg-yellow-500 text-white py-1 px-3 mt-2 rounded"
             >
               Update
