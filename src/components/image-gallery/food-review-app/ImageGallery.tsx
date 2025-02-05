@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useEffect, useState, ChangeEvent, useRef, useTransition } from "react";
 import { createClient } from "utils/supabase/client";
 import {
   deleteImage,
   updateImage,
-} from "utils/supabase/storage/food-review-app/client"; // Import the update function
+  uploadImage,
+} from "utils/supabase/storage/client"; // Import the update function
+import { convertBlobUrlToFile } from "@/lib/utils";
 
 const supabase = await createClient();
 
 const ImageGallery = () => {
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [images, setImages] = useState<
     { url: string; name: string; path: string; timestamp: number }[]
   >([]);
@@ -17,6 +22,7 @@ const ImageGallery = () => {
   const [sortBy, setSortBy] = useState<"name" | "date">("name");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imageToUpdate, setImageToUpdate] = useState<string | null>(null); // Image to update
+  const [uploadImageButton, setUploadImageButton] = useState(false);
   const [reviews, setReviews] = useState<
     Record<string, { id: string; user_email: string; review: string }[]>
   >({});
@@ -26,6 +32,65 @@ const ImageGallery = () => {
     {}
   );
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<{ url: string; name: string }[]>(
+    []
+  );
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleMenu = (id: string) => {
+    setOpenMenuId(openMenuId === id ? null : id); // Ensure both are strings
+  };
+  const startEditing = (id: string) => {
+    setEditingReviewId(id);
+
+    setOpenMenuId(null); // Close menu when editing starts
+  };
+
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+
+      // Create an array of objects containing the file's URL and name
+      const filesWithNames = filesArray.map((file) => ({
+        url: URL.createObjectURL(file), // Blob URL for preview
+        name: file.name, // Capture the original file name here
+      }));
+
+      // Set the file URLs and names in state
+      setImageUrls(filesWithNames);
+    }
+  };
+
+  const [isPending, startTransition] = useTransition();
+
+  const handleClickUploadImagesButton = async () => {
+    startTransition(async () => {
+      let urls = [];
+
+      // Iterate over the image URLs and original file names
+      for (const { url, name } of imageUrls) {
+        // Pass the original file name and the Blob URL to convertBlobUrlToFile
+        const imageFile = await convertBlobUrlToFile(url, name);
+
+        const { imageUrl, error } = await uploadImage({
+          file: imageFile,
+          bucket: "food-review-app", // The storage bucket name
+        });
+
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        // Push the uploaded image URL to the array
+        urls.push(imageUrl);
+        alert("Succesfully Uploaded!");
+      }
+
+      setImageUrls([]); // Clear the images after upload
+    });
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -59,12 +124,10 @@ const ImageGallery = () => {
           .from("food-review-app")
           .getPublicUrl(file.name).data.publicUrl;
 
-        // Assuming the filename contains a timestamp (e.g., 1645012312-image-name.png)
-        const timestamp = parseInt(file.name.split("-")[0], 10) || 0; // Extract timestamp from filename
-
+        const timestamp = parseInt(file.name.split("-")[0], 10) || 0;
         return {
           url,
-          name: file.name,
+          name: file.name.replace(/_/g, " "),
           path: file.name, // File path
           timestamp, // Add timestamp for sorting by date
         };
@@ -217,22 +280,43 @@ const ImageGallery = () => {
 
   //Handle delete Image
   const handleDelete = async (imageUrl: string) => {
-    console.log("Attempting to delete image with URL:", imageUrl);
+    // Extract the image name from the URL
+    const urlParts = imageUrl.split("/");
+    const imageName = urlParts[urlParts.length - 1]; // Get the last part of the URL
 
-    // Ensure you pass the full URL to deleteImage
-    const { data, error } = await deleteImage(imageUrl);
+    if (!imageName) {
+      console.error("Could not extract image name from URL");
+      return;
+    }
 
-    if (error) {
-      console.error("Error deleting image:", error);
-    } else {
-      setImages(images.filter((image) => image.url !== imageUrl));
+    // Delete the image from storage
+    const { error: storageError } = await deleteImage(imageUrl);
+
+    if (storageError) {
+      console.error("Error deleting image:", storageError);
+      return;
+    }
+
+    setImages(images.filter((image) => image.url !== imageUrl));
+
+    // Delete all reviews that contain the image URL
+    const { error: deleteError } = await supabase
+      .from("food_reviews")
+      .delete()
+      .like("image_name", `%${imageName.replace(/_/g, " ")}%`); // Ensure "imageUrl" is the correct column name
+
+    alert("Deleted Successfully!");
+
+    if (deleteError) {
+      console.error("Error deleting reviews:", deleteError);
     }
   };
 
-  //Handle delete image
+  //Handle update image
   const handleUpdate = async () => {
     if (!selectedImage || !imageToUpdate) {
       console.error("No image selected for update.");
+      alert("No image selected for update.");
       return;
     }
 
@@ -272,6 +356,17 @@ const ImageGallery = () => {
         )
       );
 
+      const { data, error } = await supabase
+        .from("food_reviews")
+        .update({ image_name: selectedImage.name })
+        .match({ image_name: imageToUpdate.replace(/_/g, " ") });
+
+      alert("Updated Successfully!");
+
+      if (error) {
+        console.error("Error updating database:", error);
+      }
+
       setImageToUpdate(null);
       setSelectedImage(null);
     }
@@ -298,137 +393,295 @@ const ImageGallery = () => {
   const sortedImages = sortImages(filteredImages);
 
   return (
-    <div className="min-h-screen flex justify-center items-center flex-col gap-8">
-      <input
-        type="text"
-        placeholder="Search by photo name"
-        className="mb-4 p-2 border rounded"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-      />
-      <div className="flex gap-4 mb-4">
-        <button
-          onClick={() => setSortBy("name")}
-          className={`py-1 px-4 rounded ${
-            sortBy === "name" ? "bg-blue-500" : "bg-gray-300"
-          }`}
-        >
-          Sort by Name
-        </button>
-        <button
-          onClick={() => setSortBy("date")}
-          className={`py-1 px-4 rounded ${
-            sortBy === "date" ? "bg-blue-500" : "bg-gray-300"
-          }`}
-        >
-          Sort by Date
-        </button>
-      </div>
+    <div className="min-h-screen flex flex-col gap-8 w-full py-10 px-20">
+      {/* upload images */}
+      <h1 className="font-bold text-xl">Food Review App</h1>
+      {uploadImageButton && (
+        <div className="w-full py-32 flex flex-col gap-5 items-center justify-center ">
+          <h1 className="font-bold">Select Images</h1>
+          <div className="w-fit h-fit rounded-lg border-2 border-dashed border-gray-600 p-2">
+            {imageUrls.length === 0 ? (
+              <div className="bg-slate-200 w-[500px] h-[300px] rounded-md flex justify-center items-center ">
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  ref={imageInputRef}
+                  onChange={handleImageChange}
+                  disabled={isPending}
+                />
 
-      <div className="grid grid-cols-3 gap-4">
-        {sortedImages.map(({ url, name, path }) => (
-          <div key={path} className="flex flex-col items-center">
-            <img src={url} alt={name} className="w-full h-auto rounded-lg" />
-            <span>{name}</span>
-
-            {/* Display reviews under the image */}
-            <div className="mt-2 w-full p-2 border rounded bg-gray-100">
-              <h3 className="font-semibold">Reviews:</h3>
-              {reviews[name]?.length > 0 ? (
-                reviews[name].map(({ id, user_email, review }) => (
-                  <div key={id} className="p-1 border-b">
-                    <p className="text-sm text-gray-600">{user_email}</p>
-                    {userEmail !== user_email && (
-                      <p className="text-gray-800">{review}</p>
-                    )}
-                    {userEmail === user_email && (
-                      <div>
-                        <input
-                          type="text"
-                          defaultValue={review}
-                          onBlur={(e) =>
-                            setEditingReview({
-                              ...editingReview,
-                              [id]: e.target.value,
-                            })
-                          }
-                          className="border rounded p-1 text-gray-800 w-full"
-                        />
-                        <div>
-                          <button
-                            onClick={() => handleUpdateReview(id, name)}
-                            className="bg-blue-600 text-white py-1 px-3 mt-2 rounded"
-                          >
-                            Update
-                          </button>
-                          <button
-                            onClick={() => handleDeleteReview(id, name)}
-                            className="bg-red-600 text-white py-1 px-3 mt-2 rounded"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                <button
+                  className="flex flex-col items-center justify-center"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={isPending}
+                >
+                  <svg
+                    className="w-8 h-8 mb-4 text-gray-700 "
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 20 16"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+                    />
+                  </svg>
+                  <span className="font-semibold">Click to upload</span>
+                  <span>SVG, PNG, JPG or GIF</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col justify-center items-center gap-4">
+                {imageUrls.map(({ url, name }, index) => (
+                  <div key={index} className="flex flex-col items-center">
+                    <Image
+                      src={url}
+                      width={200}
+                      height={0}
+                      alt={`img-${index}`}
+                    />
+                    <span>{name}</span> {/* Display the original file name */}
                   </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No reviews yet.</p>
-              )}
-            </div>
-
-            {/* Review input field */}
-            <textarea
-              value={reviewText[name] || ""}
-              onChange={(e) =>
-                setReviewText({ ...reviewText, [name]: e.target.value })
-              }
-              placeholder="Write a review..."
-              className="mt-2 p-2 border rounded w-full"
-            />
-            <button
-              onClick={() => handleSaveReview(name)}
-              className="bg-blue-600 text-white py-1 px-3 mt-2 rounded"
-            >
-              Save Review
-            </button>
-
-            <button
-              onClick={() => handleDelete(url)}
-              className="bg-red-600 text-white py-1 px-3 mt-2 rounded"
-            >
-              Delete
-            </button>
-            <button
-              onClick={() => setImageToUpdate(path)}
-              className="bg-yellow-500 text-white py-1 px-3 mt-2 rounded"
-            >
-              Update
-            </button>
+                ))}
+                <button
+                  onClick={() => {
+                    setUploadImageButton(false);
+                    handleClickUploadImagesButton();
+                  }}
+                  className="bg-blue-600 py-2 w-40 rounded-lg text-white font-semibold"
+                  disabled={isPending}
+                >
+                  {isPending ? "Uploading..." : "Upload"}
+                </button>
+              </div>
+            )}
           </div>
-        ))}
-      </div>
-
-      {/* Update Image */}
-      {imageToUpdate && (
-        <div className="mt-4">
-          <input
-            type="file"
-            onChange={(e) => {
-              if (e.target.files) {
-                setSelectedImage(e.target.files[0]);
-              }
-            }}
-            className="p-2 border rounded"
-          />
           <button
-            onClick={handleUpdate}
-            className="ml-4 bg-green-600 text-white py-1 px-3 rounded"
+            className="bg-blue-600 py-2 px-4 rounded h-fit text-white"
+            onClick={(e) => setUploadImageButton(false)}
           >
-            Update Image
+            Cancel
           </button>
         </div>
       )}
+      {/* Update Image */}
+      {imageToUpdate && (
+        <div className="flex justify-center items-center">
+          <div className=" flex gap-5 items-center">
+            <input
+              type="file"
+              onChange={(e) => {
+                if (e.target.files) {
+                  setSelectedImage(e.target.files[0]);
+                }
+              }}
+              className="p-2 border rounded"
+            />
+            <button
+              onClick={handleUpdate}
+              className="bg-blue-600 py-2 px-4 rounded h-fit text-white"
+            >
+              Update
+            </button>
+            <button
+              className="bg-blue-600 py-2 px-4 rounded h-fit text-white"
+              onClick={(e) => setUploadImageButton(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Conten starting here */}
+      {!uploadImageButton && !imageToUpdate && (
+        <div className="flex flex-col gap-5">
+          <div className="flex gap-5 justify-between items-center w-full">
+            <div className="flex gap-5">
+              <input
+                type="text"
+                placeholder="Search..."
+                className="mb-4 p-2 border rounded"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <div className="flex justify-center items-center gap-4 mb-4 w-fit">
+                <h1>Sort by:</h1>
+                <button
+                  onClick={() => setSortBy("name")}
+                  className={`py-1 px-4 rounded ${
+                    sortBy === "name"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-300 text-black"
+                  }`}
+                >
+                  Name
+                </button>
+                <button
+                  onClick={() => setSortBy("date")}
+                  className={`py-1 px-4 rounded ${
+                    sortBy === "date"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-300 text-black"
+                  }`}
+                >
+                  Date
+                </button>
+              </div>
+            </div>
+            <button
+              className="bg-blue-500 py-2 px-4 rounded h-fit text-white"
+              onClick={(e) => setUploadImageButton(true)}
+            >
+              Upload Image
+            </button>
+          </div>
+
+          <div className="flex flex-col  gap-4">
+            {sortedImages.map(({ url, name, path }) => (
+              <div
+                key={path}
+                className="grid grid-cols-2 items-center bg-slate-200 py-8 px-5 rounded-lg"
+              >
+                <div className="flex flex-col items-center justify-center">
+                  <span className="w-full text-start">{name}</span>
+                  <Image src={url} width={200} height={0} alt={name} />
+                  <div className="flex gap-5">
+                    <button
+                      onClick={() => handleDelete(url)}
+                      className="bg-red-600 text-white py-1 px-3 mt-2 rounded"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setImageToUpdate(path)}
+                      className="bg-yellow-500 text-white py-1 px-3 mt-2 rounded"
+                    >
+                      Update
+                    </button>
+                  </div>
+                </div>
+
+                {/* Display reviews under the image */}
+                <div>
+                  <div className="mt-2 w-full px-2 py-5 border rounded bg-gray-100">
+                    <h3 className="font-semibold">Reviews:</h3>
+                    {reviews[name]?.length > 0 ? (
+                      reviews[name].map(({ id, user_email, review }) => (
+                        <div key={id} className="p-1  border-b">
+                          <p className="text-sm text-gray-600">{user_email}</p>
+                          {userEmail !== user_email && (
+                            <p className="text-gray-800">{review}</p>
+                          )}
+                          {userEmail === user_email && (
+                            <div>
+                              <div className="relative flex">
+                                <div className="flex justify-between w-full items-center">
+                                  <div>
+                                    {editingReviewId === id ? (
+                                      <>
+                                        <input
+                                          type="text"
+                                          defaultValue={review}
+                                          onBlur={(e) =>
+                                            setEditingReview({
+                                              ...editingReview,
+                                              [id]: e.target.value,
+                                            })
+                                          }
+                                          className="border rounded p-1 text-gray-800 w-full"
+                                        />
+                                        <div className="flex gap-5">
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateReview(id, name);
+                                              setEditingReviewId(null);
+                                            }}
+                                            className="mt-2 bg-blue-500 text-white px-4 py-1 rounded"
+                                          >
+                                            Update
+                                          </button>
+                                          <button
+                                            onClick={() =>
+                                              setEditingReviewId(null)
+                                            }
+                                            className="mt-2 bg-blue-500 text-white px-4 py-1 rounded"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <p className="text-gray-800">{review}</p>
+                                    )}
+                                  </div>
+                                  {editingReviewId !== id && (
+                                    <button
+                                      onClick={() => toggleMenu(id)}
+                                      className="font-bold text-[20px]"
+                                    >
+                                      ...
+                                    </button>
+                                  )}
+                                </div>
+
+                                {openMenuId === id && ( // Show menu only for the selected review
+                                  <div className="absolute right-0 flex flex-col mt-10 bg-white shadow-lg  rounded-md z-20">
+                                    <button
+                                      onClick={() => startEditing(id)}
+                                      className="hover:bg-slate-400 py-2 px-5"
+                                    >
+                                      Update
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteReview(id, name)
+                                      }
+                                      className="hover:bg-slate-400 py-2 px-5"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">No reviews yet.</p>
+                    )}
+                  </div>
+
+                  {/* Review input field */}
+                  <div className="flex gap-5 w-full justify-center items-center">
+                    <textarea
+                      value={reviewText[name] || ""}
+                      onChange={(e) =>
+                        setReviewText({ ...reviewText, [name]: e.target.value })
+                      }
+                      placeholder="Write a review..."
+                      className="mt-2 p-2 border rounded w-full"
+                    />
+                    <button
+                      onClick={() => handleSaveReview(name)}
+                      className="bg-blue-600 text-white py-1 px-3 mt-2 h-fit rounded"
+                    >
+                      Post
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Update Image */}
     </div>
   );
 };

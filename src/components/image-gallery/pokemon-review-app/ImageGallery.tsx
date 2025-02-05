@@ -13,6 +13,8 @@ import { convertBlobUrlToFile } from "@/lib/utils";
 const supabase = await createClient();
 
 const ImageGallery = () => {
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [images, setImages] = useState<
     { url: string; name: string; path: string; timestamp: number }[]
   >([]);
@@ -21,12 +23,29 @@ const ImageGallery = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imageToUpdate, setImageToUpdate] = useState<string | null>(null); // Image to update
   const [uploadImageButton, setUploadImageButton] = useState(false);
+  const [reviews, setReviews] = useState<
+    Record<string, { id: string; user_email: string; review: string }[]>
+  >({});
 
+  const [reviewText, setReviewText] = useState<Record<string, string>>({});
+  const [editingReview, setEditingReview] = useState<Record<string, string>>(
+    {}
+  );
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<{ url: string; name: string }[]>(
     []
   );
 
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleMenu = (id: string) => {
+    setOpenMenuId(openMenuId === id ? null : id); // Ensure both are strings
+  };
+  const startEditing = (id: string) => {
+    setEditingReviewId(id);
+
+    setOpenMenuId(null); // Close menu when editing starts
+  };
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -56,7 +75,7 @@ const ImageGallery = () => {
 
         const { imageUrl, error } = await uploadImage({
           file: imageFile,
-          bucket: "google-drive-lite", // The storage bucket name
+          bucket: "pokemon-review-app", // The storage bucket name
         });
 
         if (error) {
@@ -74,9 +93,24 @@ const ImageGallery = () => {
   };
 
   useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        if (user.email) {
+          setUserEmail(user.email);
+        }
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
     const fetchImages = async () => {
       const { data, error } = await supabase.storage
-        .from("google-drive-lite")
+        .from("pokemon-review-app")
         .list();
 
       if (error) {
@@ -87,7 +121,7 @@ const ImageGallery = () => {
       // Fetch image URLs and names
       const imagesData = data.map((file) => {
         const url = supabase.storage
-          .from("google-drive-lite")
+          .from("pokemon-review-app")
           .getPublicUrl(file.name).data.publicUrl;
 
         const timestamp = parseInt(file.name.split("-")[0], 10) || 0;
@@ -104,6 +138,145 @@ const ImageGallery = () => {
 
     fetchImages();
   }, [images]);
+
+  //fetch reviews
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("pokemon_reviews")
+          .select("id, user_email, image_name, review");
+
+        if (error) throw error;
+
+        const reviewsMap: Record<
+          string,
+          { id: string; user_email: string; review: string }[]
+        > = {};
+
+        data.forEach(({ id, image_name, user_email, review }) => {
+          if (!reviewsMap[image_name]) reviewsMap[image_name] = [];
+          reviewsMap[image_name].push({ id, user_email, review });
+        });
+
+        setReviews(reviewsMap);
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
+  //Handle Save Review
+  const handleSaveReview = async (imageName: string) => {
+    if (!reviewText[imageName]) {
+      alert("Please enter a review before saving.");
+      return;
+    }
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const userEmail = user?.email;
+
+      if (!userEmail) {
+        alert("User not logged in!");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("pokemon_reviews")
+        .insert([
+          {
+            user_email: userEmail,
+            image_name: imageName,
+            review: reviewText[imageName],
+          },
+        ])
+        .select();
+
+      if (error) throw error;
+
+      setReviews((prevReviews) => ({
+        ...prevReviews,
+        [imageName]: [
+          ...(prevReviews[imageName] || []),
+          {
+            id: data[0].id,
+            user_email: userEmail,
+            review: reviewText[imageName],
+          },
+        ],
+      }));
+
+      setReviewText((prev) => ({ ...prev, [imageName]: "" }));
+
+      alert("Review saved successfully!");
+    } catch (error) {
+      console.error("Error saving review:", error);
+      alert("Error saving review");
+    }
+  };
+
+  //Handle Update review
+  const handleUpdateReview = async (reviewId: string, imageName: string) => {
+    const updatedReview = editingReview[reviewId];
+    if (!updatedReview.trim()) {
+      alert("Review cannot be empty.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("pokemon_reviews")
+        .update({ review: updatedReview })
+        .eq("id", reviewId);
+
+      if (error) throw error;
+
+      setReviews((prevReviews) => ({
+        ...prevReviews,
+        [imageName]: prevReviews[imageName].map((r) =>
+          r.id === reviewId ? { ...r, review: updatedReview } : r
+        ),
+      }));
+
+      setEditingReview((prev) => {
+        const updatedState = { ...prev };
+        delete updatedState[reviewId];
+        return updatedState;
+      });
+
+      alert("Review updated successfully!");
+    } catch (error) {
+      console.error("Error updating review:", error);
+      alert("Error updating review");
+    }
+  };
+
+  //Handle delete reviews
+  const handleDeleteReview = async (reviewId: string, imageName: string) => {
+    try {
+      const { error } = await supabase
+        .from("pokemon_reviews")
+        .delete()
+        .eq("id", reviewId);
+
+      if (error) throw error;
+
+      setReviews((prevReviews) => ({
+        ...prevReviews,
+        [imageName]: prevReviews[imageName].filter((r) => r.id !== reviewId),
+      }));
+
+      alert("Review deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      alert("Error deleting review");
+    }
+  };
 
   //Handle delete Image
   const handleDelete = async (imageUrl: string) => {
@@ -127,8 +300,16 @@ const ImageGallery = () => {
     setImages(images.filter((image) => image.url !== imageUrl));
 
     // Delete all reviews that contain the image URL
+    const { error: deleteError } = await supabase
+      .from("pokemon_reviews")
+      .delete()
+      .like("image_name", `%${imageName.replace(/_/g, " ")}%`); // Ensure "imageUrl" is the correct column name
 
     alert("Deleted Successfully!");
+
+    if (deleteError) {
+      console.error("Error deleting reviews:", deleteError);
+    }
   };
 
   //Handle update image
@@ -151,7 +332,7 @@ const ImageGallery = () => {
     const { error } = await updateImage(
       imageToDeleteUrl,
       selectedImage,
-      "google-drive-lite"
+      "pokemon-review-app"
     );
 
     if (error) {
@@ -159,7 +340,7 @@ const ImageGallery = () => {
     } else {
       // After successful update, immediately update the state with the new image URL
       const updatedImageUrl = supabase.storage
-        .from("google-drive-lite")
+        .from("pokemon-review-app")
         .getPublicUrl(selectedImage.name).data.publicUrl;
 
       setImages((prevImages) =>
@@ -174,6 +355,11 @@ const ImageGallery = () => {
             : image
         )
       );
+
+      const { data, error } = await supabase
+        .from("pokemon_reviews")
+        .update({ image_name: selectedImage.name })
+        .match({ image_name: imageToUpdate.replace(/_/g, " ") });
 
       alert("Updated Successfully!");
 
@@ -207,9 +393,9 @@ const ImageGallery = () => {
   const sortedImages = sortImages(filteredImages);
 
   return (
-    <div className="min-h-screen flex flex-col gap-8 w-full py-10  px-20">
+    <div className="min-h-screen flex flex-col gap-8 w-full py-10 px-20">
       {/* upload images */}
-      <h1 className="font-bold text-xl">Google Drive Lite</h1>
+      <h1 className="font-bold text-xl">Pokemon Review App</h1>
       {uploadImageButton && (
         <div className="w-full py-32 flex flex-col gap-5 items-center justify-center ">
           <h1 className="font-bold">Select Images</h1>
@@ -355,13 +541,13 @@ const ImageGallery = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-3  gap-4">
+          <div className="flex flex-col  gap-4">
             {sortedImages.map(({ url, name, path }) => (
               <div
                 key={path}
-                className="items-center bg-slate-200 py-8 px-5 rounded-lg"
+                className="grid grid-cols-2 items-center bg-slate-200 py-8 px-5 rounded-lg"
               >
-                <div className="flex flex-col gap-5 items-center justify-center">
+                <div className="flex flex-col items-center justify-center">
                   <span className="w-full text-start">{name}</span>
                   <Image src={url} width={200} height={0} alt={name} />
                   <div className="flex gap-5">
@@ -379,11 +565,123 @@ const ImageGallery = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Display reviews under the image */}
+                <div>
+                  <div className="mt-2 w-full px-2 py-5 border rounded bg-gray-100">
+                    <h3 className="font-semibold">Reviews:</h3>
+                    {reviews[name]?.length > 0 ? (
+                      reviews[name].map(({ id, user_email, review }) => (
+                        <div key={id} className="p-1  border-b">
+                          <p className="text-sm text-gray-600">{user_email}</p>
+                          {userEmail !== user_email && (
+                            <p className="text-gray-800">{review}</p>
+                          )}
+                          {userEmail === user_email && (
+                            <div>
+                              <div className="relative flex">
+                                <div className="flex justify-between w-full items-center">
+                                  <div>
+                                    {editingReviewId === id ? (
+                                      <>
+                                        <input
+                                          type="text"
+                                          defaultValue={review}
+                                          onBlur={(e) =>
+                                            setEditingReview({
+                                              ...editingReview,
+                                              [id]: e.target.value,
+                                            })
+                                          }
+                                          className="border rounded p-1 text-gray-800 w-full"
+                                        />
+                                        <div className="flex gap-5">
+                                          <button
+                                            onClick={() => {
+                                              handleUpdateReview(id, name);
+                                              setEditingReviewId(null);
+                                            }}
+                                            className="mt-2 bg-blue-500 text-white px-4 py-1 rounded"
+                                          >
+                                            Update
+                                          </button>
+                                          <button
+                                            onClick={() =>
+                                              setEditingReviewId(null)
+                                            }
+                                            className="mt-2 bg-blue-500 text-white px-4 py-1 rounded"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <p className="text-gray-800">{review}</p>
+                                    )}
+                                  </div>
+                                  {editingReviewId !== id && (
+                                    <button
+                                      onClick={() => toggleMenu(id)}
+                                      className="font-bold text-[20px]"
+                                    >
+                                      ...
+                                    </button>
+                                  )}
+                                </div>
+
+                                {openMenuId === id && ( // Show menu only for the selected review
+                                  <div className="absolute right-0 flex flex-col mt-10 bg-white shadow-lg  rounded-md z-20">
+                                    <button
+                                      onClick={() => startEditing(id)}
+                                      className="hover:bg-slate-400 py-2 px-5"
+                                    >
+                                      Update
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteReview(id, name)
+                                      }
+                                      className="hover:bg-slate-400 py-2 px-5"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">No reviews yet.</p>
+                    )}
+                  </div>
+
+                  {/* Review input field */}
+                  <div className="flex gap-5 w-full justify-center items-center">
+                    <textarea
+                      value={reviewText[name] || ""}
+                      onChange={(e) =>
+                        setReviewText({ ...reviewText, [name]: e.target.value })
+                      }
+                      placeholder="Write a review..."
+                      className="mt-2 p-2 border rounded w-full"
+                    />
+                    <button
+                      onClick={() => handleSaveReview(name)}
+                      className="bg-blue-600 text-white py-1 px-3 mt-2 h-fit rounded"
+                    >
+                      Post
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Update Image */}
     </div>
   );
 };

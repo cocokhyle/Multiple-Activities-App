@@ -1,4 +1,4 @@
-import { createClient } from "../../client";
+import { createClient } from "../client";
 import { v4 as uuidv4 } from "uuid";
 import imageCompression from "browser-image-compression";
 
@@ -70,7 +70,7 @@ export const deleteImage = async (imageUrl: string) => {
   const storage = getStorage();
 
   // Log the bucket and path for debugging
-  console.log("Bucket:", bucket, "Path:", path);
+  // console.log("Bucket:", bucket, "Path:", path);
 
   const { data, error } = await storage.from(bucket).remove([path]);
 
