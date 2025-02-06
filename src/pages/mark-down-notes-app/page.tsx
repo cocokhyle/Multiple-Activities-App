@@ -7,6 +7,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github.css"; // Syntax highlighting style
+import { MdDeleteOutline } from "react-icons/md";
+import { SlNote } from "react-icons/sl";
 
 export default function MarkdownNotes() {
   const [notes, setNotes] = useState<any[]>([]);
@@ -100,57 +102,75 @@ export default function MarkdownNotes() {
         {/* Sidebar */}
         <div className="col-span-1 flex flex-col items-start border-2 border-solid border-gray-100 py-3">
           <h1 className="p-5 font-bold text-2xl">Notes</h1>
-          <button
-            onClick={handleAddNote}
-            className="bg-blue-600 py-2 px-4 rounded text-white m-5"
-          >
-            Add New Note
-          </button>
-          {notes.map((note) => (
-            <button
-              className={`hover:bg-blue-300 py-3 px-5 w-full text-start ${
-                selectedNoteId === note.id ? "bg-blue-200" : ""
-              }`}
-              key={note.id}
-              onClick={() => setSelectedNoteId(note.id)} // Set the selected note ID
-            >
-              {note.content.split("\n")[0]}
-            </button>
-          ))}
+          <div className="flex w-full justify-between px-5">
+            <div></div>
+            <div>
+              <button
+                onClick={handleAddNote}
+                className="bg-blue-600 py-2 px-4 rounded text-white p-5 flex items-center gap-2"
+              >
+                Add Notes
+                <SlNote />
+              </button>
+            </div>
+          </div>
+          <div className="py-5 w-full">
+            {notes.map((note) => (
+              <button
+                className={`hover:bg-blue-300 py-3 px-5 w-full text-start ${
+                  selectedNoteId === note.id ? "bg-blue-200" : ""
+                }`}
+                key={note.id}
+                onClick={() => setSelectedNoteId(note.id)} // Set the selected note ID
+              >
+                {note.content.split("\n")[0]}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Main Content */}
         <div className="w-full col-span-2 border-2 border-solid border-gray-100 p-3">
           {selectedNote ? (
             <div className="w-full mt-4">
-              <div className="flex gap-2 mb-2">
-                <button
-                  onClick={() => toggleViewMode(selectedNote.id, "raw")}
-                  className={`px-4 py-2 rounded ${
-                    viewModes[selectedNote.id] === "raw" ||
-                    viewModes[selectedNote.id] === undefined
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200"
-                  }`}
-                >
-                  Raw
-                </button>
-                <button
-                  onClick={() => toggleViewMode(selectedNote.id, "preview")}
-                  className={`px-4 py-2 rounded  ${
-                    viewModes[selectedNote.id] === "preview"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200"
-                  }`}
-                >
-                  Preview
-                </button>
+              <div className="flex justify-between py-5 px-5">
+                <div className="flex gap-2 ">
+                  <button
+                    onClick={() => toggleViewMode(selectedNote.id, "raw")}
+                    className={`px-4 py-2 rounded ${
+                      viewModes[selectedNote.id] === "raw" ||
+                      viewModes[selectedNote.id] === undefined
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200"
+                    }`}
+                  >
+                    Raw
+                  </button>
+                  <button
+                    onClick={() => toggleViewMode(selectedNote.id, "preview")}
+                    className={`px-4 py-2 rounded  ${
+                      viewModes[selectedNote.id] === "preview"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200"
+                    }`}
+                  >
+                    Preview
+                  </button>
+                </div>
+                <div className="flex gap-2 ">
+                  <button
+                    onClick={() => handleDeleteNote(selectedNote.id)}
+                    className="bg-red-600 py-2 px-4 rounded text-white"
+                  >
+                    <MdDeleteOutline />
+                  </button>
+                </div>
               </div>
               {viewModes[selectedNote.id] === "preview" ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight]}
-                  className="prose markdown"
+                  className="prose markdown px-5"
                 >
                   {updatedContent[selectedNote.id] || selectedNote.content}
                 </ReactMarkdown>
@@ -173,14 +193,6 @@ export default function MarkdownNotes() {
                       }
                       className="p-2 border rounded w-full h-52"
                     />
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => handleDeleteNote(selectedNote.id)}
-                        className="bg-red-600 py-2 px-4 rounded text-white"
-                      >
-                        Delete
-                      </button>
-                    </div>
                   </div>
                 </pre>
               )}

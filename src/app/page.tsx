@@ -9,6 +9,7 @@ import GoogleDriveLite from "@/pages/google-drive/page";
 import FoodReviewApp from "@/pages/food-review-app/page";
 import PokemonReviewApp from "@/pages/pokemon-review-app/page";
 import MarkdownNotes from "@/pages/mark-down-notes-app/page";
+import Menu from "@/components/menu/page";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -21,7 +22,7 @@ export default async function Home() {
   return (
     <div>
       <Header />
-      <MarkdownNotes />
+      <Menu />
     </div>
   );
 }

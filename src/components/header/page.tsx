@@ -13,11 +13,21 @@ export default async function Header() {
   }
 
   return (
-    <div className="flex py-5 px-10 justify-between shadow-lg">
-      <p>Hello {data.user.email}</p>
+    <div className="flex py-5 px-10 justify-between border-2 border-gray-100 font-medium">
+      <p className="">Hello {data.user.email}</p>
       <div className="flex gap-5">
-        <button onClick={logout}>Logout</button>
-        <button onClick={deleteAccount}>Delete Account</button>
+        <button
+          className="px-3 py-2 bg-blue-600 text-white rounded-lg"
+          onClick={logout}
+        >
+          Logout
+        </button>
+        <button
+          className="px-3 py-2 bg-red-600 text-white rounded-lg"
+          onClick={deleteAccount}
+        >
+          Delete Account
+        </button>
       </div>
     </div>
   );

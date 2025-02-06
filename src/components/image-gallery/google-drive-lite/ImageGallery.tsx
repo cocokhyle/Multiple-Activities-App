@@ -9,6 +9,7 @@ import {
   uploadImage,
 } from "utils/supabase/storage/client"; // Import the update function
 import { convertBlobUrlToFile } from "@/lib/utils";
+import { HiDotsVertical } from "react-icons/hi";
 
 const supabase = await createClient();
 
@@ -25,6 +26,11 @@ const ImageGallery = () => {
   const [imageUrls, setImageUrls] = useState<{ url: string; name: string }[]>(
     []
   );
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const toggleMenu = (id: string) => {
+    setOpenMenuId(openMenuId === id ? null : id); // Ensure both are strings
+  };
 
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -314,22 +320,22 @@ const ImageGallery = () => {
       {/* Conten starting here */}
       {!uploadImageButton && !imageToUpdate && (
         <div className="flex flex-col gap-5">
-          <div className="flex gap-5 justify-between items-center w-full">
-            <div className="flex gap-5">
+          <div className="flex  gap-5 justify-between items-center w-full">
+            <div className="flex  gap-5">
               <input
                 type="text"
                 placeholder="Search..."
-                className="mb-4 p-2 border rounded"
+                className="px-2 border rounded"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <div className="flex justify-center items-center gap-4 mb-4 w-fit">
+              <div className="flex justify-center  gap-4 w-fit h-full">
                 <h1>Sort by:</h1>
                 <button
                   onClick={() => setSortBy("name")}
                   className={`py-1 px-4 rounded ${
                     sortBy === "name"
-                      ? "bg-blue-500 text-white"
+                      ? "bg-blue-600 text-white"
                       : "bg-gray-300 text-black"
                   }`}
                 >
@@ -339,7 +345,7 @@ const ImageGallery = () => {
                   onClick={() => setSortBy("date")}
                   className={`py-1 px-4 rounded ${
                     sortBy === "date"
-                      ? "bg-blue-500 text-white"
+                      ? "bg-blue-600 text-white"
                       : "bg-gray-300 text-black"
                   }`}
                 >
@@ -348,7 +354,7 @@ const ImageGallery = () => {
               </div>
             </div>
             <button
-              className="bg-blue-500 py-2 px-4 rounded h-fit text-white"
+              className="bg-blue-600 py-1 px-4 rounded-md text-white"
               onClick={(e) => setUploadImageButton(true)}
             >
               Upload Image
@@ -359,25 +365,38 @@ const ImageGallery = () => {
             {sortedImages.map(({ url, name, path }) => (
               <div
                 key={path}
-                className="items-center bg-slate-200 py-8 px-5 rounded-lg"
+                className="items-center bg-gray-100 py-5 px-5 rounded-lg relative "
               >
-                <div className="flex flex-col gap-5 items-center justify-center">
-                  <span className="w-full text-start">{name}</span>
-                  <Image src={url} width={200} height={0} alt={name} />
-                  <div className="flex gap-5">
+                {openMenuId === name && (
+                  <div className="absolute right-3 py-1 flex flex-col mt-10 bg-white shadow-lg  rounded-md z-20">
                     <button
                       onClick={() => handleDelete(url)}
-                      className="bg-red-600 text-white py-1 px-3 mt-2 rounded"
+                      className="  py-1 px-3  hover:bg-gray-100"
                     >
                       Delete
                     </button>
                     <button
                       onClick={() => setImageToUpdate(path)}
-                      className="bg-yellow-500 text-white py-1 px-3 mt-2 rounded"
+                      className="  py-1 px-3  rounded hover:bg-gray-100"
                     >
                       Update
                     </button>
                   </div>
+                )}
+                <div className="flex flex-col gap-5 items-center justify-center">
+                  <div className="w-full flex justify-between">
+                    <span className="w-full text-start font-semibold">
+                      {name}
+                    </span>
+                    <button
+                      className="font-bold"
+                      onClick={() => toggleMenu(name)}
+                    >
+                      <HiDotsVertical size={20} />
+                    </button>
+                  </div>
+
+                  <Image src={url} width={200} height={0} alt={name} />
                 </div>
               </div>
             ))}
