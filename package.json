@@ -15,9 +15,15 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/next-auth": "^3.13.0",
     "browser-image-compression": "^2.0.2",
+    "highlight.js": "^11.11.1",
     "next": "15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-icons": "^5.4.0",
+    "react-markdown": "^9.0.3",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.0",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
