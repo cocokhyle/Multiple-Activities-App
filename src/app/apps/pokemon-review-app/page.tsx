@@ -1,6 +1,6 @@
 import Header from "@/components/header/page";
-import PokemonReviewApp from "@/pages/pokemon-review-app/page";
-import TodoList from "@/pages/todo-list/page";
+import PokemonReviewApp from "@/components/pokemon-review-app/page";
+import TodoList from "@/components/todo-list/page";
 
 export default function PokemonApp() {
   return (

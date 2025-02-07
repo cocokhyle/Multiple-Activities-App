@@ -1,5 +1,5 @@
 import Header from "@/components/header/page";
-import MarkdownNotes from "@/pages/mark-down-notes-app/page";
+import MarkdownNotes from "@/components/mark-down-notes-app/page";
 
 export default function MarkDown() {
   return (

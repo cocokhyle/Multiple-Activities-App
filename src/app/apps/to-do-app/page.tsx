@@ -1,5 +1,5 @@
 import Header from "@/components/header/page";
-import TodoList from "@/pages/todo-list/page";
+import TodoList from "@/components/todo-list/page";
 
 export default function ToDoApp() {
   return (

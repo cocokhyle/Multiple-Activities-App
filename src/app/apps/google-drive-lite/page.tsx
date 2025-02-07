@@ -1,5 +1,5 @@
 import Header from "@/components/header/page";
-import GoogleDriveLite from "@/pages/google-drive/page";
+import GoogleDriveLite from "@/components/google-drive/page";
 
 export default function GoogleDrive() {
   return (
