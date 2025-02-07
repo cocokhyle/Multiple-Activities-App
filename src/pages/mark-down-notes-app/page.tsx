@@ -34,7 +34,30 @@ export default function MarkdownNotes() {
       }
       if (user) {
         setUserId(user.id);
-        const notes = await getNotes(user.id);
+        let userNotes = await getNotes(user.id);
+
+        // Fetch the global default note
+        const { data: defaultNote, error: defaultNoteError } = await supabase
+          .from("notes")
+          .select("*")
+          .eq("id", "b3f2959b-2ade-40de-9c8f-b7c5e44b2b6f")
+          .single();
+
+        if (defaultNoteError) {
+          console.error("Error fetching default note:", defaultNoteError);
+        }
+
+        let notes = userNotes;
+
+        // Ensure the default note is included
+        if (defaultNote) {
+          const isDefaultNotePresent = userNotes.some(
+            (note) => note.id === defaultNote.id
+          );
+          if (!isDefaultNotePresent) {
+            notes = [defaultNote, ...userNotes];
+          }
+        }
 
         // Sort notes by creation date (newest to oldest)
         const sortedNotes = notes.sort(
@@ -95,7 +118,7 @@ export default function MarkdownNotes() {
     notes.find((note) => note.id === selectedNoteId) || notes[0]; // Get the selected note
 
   return (
-    <div className="h-screen flex flex-col items-center gap-8 w-full py-10 px-20">
+    <div className="h-screen flex flex-col items-center gap-8 w-full  px-20">
       <h1 className="font-bold text-xl w-full text-start">Markdown Notes</h1>
 
       <div className="grid grid-cols-3 h-full w-full">

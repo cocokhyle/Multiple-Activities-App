@@ -11,17 +11,10 @@ import PokemonReviewApp from "@/pages/pokemon-review-app/page";
 import MarkdownNotes from "@/pages/mark-down-notes-app/page";
 import Menu from "@/components/menu/page";
 
-export default async function Home() {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data?.user) {
-    redirect("/login");
-  }
-
+export default function Home() {
   return (
     <div>
-      <Header />
+      <Header button={false} />
       <Menu />
     </div>
   );

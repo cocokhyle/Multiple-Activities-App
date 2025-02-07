@@ -213,7 +213,7 @@ const ImageGallery = () => {
   const sortedImages = sortImages(filteredImages);
 
   return (
-    <div className="min-h-screen flex flex-col gap-8 w-full py-10  px-20">
+    <div className="min-h-screen flex flex-col gap-8 w-full px-20">
       {/* upload images */}
       <h1 className="font-bold text-xl">Google Drive Lite</h1>
       {uploadImageButton && (

@@ -399,7 +399,7 @@ const ImageGallery = () => {
   const sortedImages = sortImages(filteredImages);
 
   return (
-    <div className="min-h-screen flex flex-col gap-8 w-full py-10 px-20">
+    <div className="min-h-screen flex flex-col gap-8 w-full px-20">
       {/* upload images */}
       <h1 className="font-bold text-xl">food Review App</h1>
       {uploadImageButton && (
@@ -559,10 +559,12 @@ const ImageGallery = () => {
                     <button className="" onClick={() => toggleImageMenu(name)}>
                       <HiDotsVertical size={20} />
                     </button>
-                    <span className="w-full text-start">{name}</span>
+                    <span className="w-full text-start font-medium">
+                      {name.replace(/\.(png|jpe?g|webp|gif)$/i, "")}
+                    </span>
                   </div>
                   {openImageMenuId === name && (
-                    <div className="absolute left-3 py-1 mt-10 flex flex-col bg-white shadow-lg  rounded-md">
+                    <div className="absolute left-3 py-1 mt-10 flex flex-col bg-white shadow-lg  rounded-md z-50">
                       <button
                         onClick={() => handleDelete(url)}
                         className="  py-1 px-3  hover:bg-gray-100"
@@ -577,8 +579,13 @@ const ImageGallery = () => {
                       </button>
                     </div>
                   )}
-                  <div className="w-full h-full flex justify-center items-center">
-                    <Image src={url} width={200} height={0} alt={name} />
+                  <div className="w-full h-full flex justify-center items-center relative mt-5">
+                    <Image
+                      src={url}
+                      layout="fill"
+                      objectFit="contain"
+                      alt={name}
+                    />
                   </div>
                 </div>
 
