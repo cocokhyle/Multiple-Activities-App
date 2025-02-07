@@ -10,8 +10,14 @@ import "highlight.js/styles/github.css"; // Syntax highlighting style
 import { MdDeleteOutline } from "react-icons/md";
 import { SlNote } from "react-icons/sl";
 
+interface Note {
+  id: string;
+  created_at: string;
+  content: string; // Adjust based on the actual structure of your notes
+}
+
 export default function MarkdownNotes() {
-  const [notes, setNotes] = useState<any[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [viewModes, setViewModes] = useState<{
     [key: string]: "raw" | "preview";
@@ -28,13 +34,14 @@ export default function MarkdownNotes() {
         data: { user },
         error,
       } = await supabase.auth.getUser();
+
       if (error) {
         console.error("Error fetching user:", error);
         return;
       }
       if (user) {
         setUserId(user.id);
-        let userNotes = await getNotes(user.id);
+        let userNotes = await getNotes(user.id); // Fetch notes from Supabase
 
         // Fetch the global default note
         const { data: defaultNote, error: defaultNoteError } = await supabase
@@ -78,7 +85,7 @@ export default function MarkdownNotes() {
     const note = await addNote(userId, "Untitled");
     if (note) {
       setNotes([note, ...notes]);
-      setSelectedNoteId(note.id); // Select the newly created note
+      setSelectedNoteId(note.id); // This should now work without the 'never' error
     }
     alert("Added Note Successfully!");
   };

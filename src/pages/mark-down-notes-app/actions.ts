@@ -1,6 +1,16 @@
 import { createClient } from "@/app/utils/supabase/client";
 
-export const addNote = async (userId: string, content: string) => {
+interface Note {
+  id: string;
+  created_at: string; // Add any other necessary fields
+  content: string;
+  user_id: string; // Assuming the user_id is part of the note
+}
+
+export const addNote = async (
+  userId: string,
+  content: string
+): Promise<Note | null> => {
   const supabase = createClient();
 
   const { data, error } = await supabase
@@ -15,7 +25,6 @@ export const addNote = async (userId: string, content: string) => {
 
   return data;
 };
-
 export const updateNote = async (
   noteId: string,
   userId: string,
