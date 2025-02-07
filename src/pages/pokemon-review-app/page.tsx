@@ -1,6 +1,6 @@
 "use client";
 
-import { uploadImage } from "utils/supabase/storage/client";
+import { uploadImage } from "@/app/utils/supabase/storage/client";
 import { ChangeEvent, useRef, useState, useTransition } from "react";
 import { convertBlobUrlToFile } from "@/lib/utils";
 import Image from "next/image";

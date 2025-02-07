@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getTodos, addTodo, updateTodo, deleteTodo } from "./actions";
-import { createClient } from "utils/supabase/client";
+import { createClient } from "@/app/utils/supabase/client";
 
 export default function TodoList() {
   const [todos, setTodos] = useState<any[]>([]);

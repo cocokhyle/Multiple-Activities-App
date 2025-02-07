@@ -2,12 +2,12 @@
 
 import Image from "next/image";
 import { useEffect, useState, ChangeEvent, useRef, useTransition } from "react";
-import { createClient } from "utils/supabase/client";
+import { createClient } from "@/app/utils/supabase/client";
 import {
   deleteImage,
   updateImage,
   uploadImage,
-} from "utils/supabase/storage/client"; // Import the update function
+} from "@/app/utils/supabase/storage/client"; // Import the update function
 import { convertBlobUrlToFile } from "@/lib/utils";
 import { HiDotsVertical } from "react-icons/hi";
 

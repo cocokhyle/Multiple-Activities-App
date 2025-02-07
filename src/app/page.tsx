@@ -1,7 +1,7 @@
 import Image from "next/image";
 import LoginPage from "./login/page";
 
-import { createClient } from "utils/supabase/server";
+import { createClient } from "@/app/utils/supabase/server";
 import { redirect } from "next/navigation";
 import Header from "@/components/header/page";
 import TodoList from "@/pages/todo-list/page";

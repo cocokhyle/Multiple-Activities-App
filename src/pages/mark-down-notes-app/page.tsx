@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getNotes, addNote, updateNote, deleteNote } from "./actions";
-import { createClient } from "utils/supabase/client";
+import { createClient } from "@/app/utils/supabase/client";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";

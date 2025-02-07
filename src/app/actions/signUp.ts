@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createClient } from "utils/supabase/server";
+import { createClient } from "@/app/utils/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 // Initialize Supabase Admin Client (backend only)

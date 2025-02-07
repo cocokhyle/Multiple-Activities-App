@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { createClient } from "utils/supabase/server";
+import { createClient } from "@/app/utils/supabase/server";
 import { logout } from "../../app/actions/logout";
 import { deleteAccount } from "../../app/actions/deleteAccount";
 import Link from "next/link";
