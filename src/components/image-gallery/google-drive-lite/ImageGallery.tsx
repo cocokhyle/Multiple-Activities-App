@@ -310,7 +310,7 @@ const ImageGallery = () => {
             </button>
             <button
               className="bg-blue-600 py-2 px-4 rounded h-fit text-white"
-              onClick={(e) => setUploadImageButton(false)}
+              onClick={(e) => setImageToUpdate(null)}
             >
               Cancel
             </button>
