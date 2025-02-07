@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { login } from "../actions/login";
-import { signup } from "../actions/signUp";
+import { login } from "../utils/actions/login";
+import { signup } from "../utils/actions/signUp";
 import { MdOutlineMail } from "react-icons/md";
 import { TbLockPassword } from "react-icons/tb";
 import { GoKey } from "react-icons/go";

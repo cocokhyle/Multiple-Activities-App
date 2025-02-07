@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/app/utils/supabase/server";
-import { logout } from "../../app/actions/logout";
-import { deleteAccount } from "../../app/actions/deleteAccount";
+import { logout } from "../../app/utils/actions/logout";
+import { deleteAccount } from "../../app/utils/actions/deleteAccount";
 import Link from "next/link";
 import { IoChevronBackOutline } from "react-icons/io5";
 
