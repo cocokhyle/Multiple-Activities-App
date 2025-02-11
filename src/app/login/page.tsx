@@ -17,6 +17,9 @@ export default function AuthPage() {
     const result = await login(formData);
     if (result?.error) {
       setError(result.error);
+      if (result.error === "Email not confirmed") {
+        setError("Please verify your email by checking your Gmail inbox.");
+      }
       setMessage(null);
     } else {
       setError(null);
@@ -34,13 +37,12 @@ export default function AuthPage() {
       setMessage(null);
     } else {
       setError(null);
-      setMessage("Signup successful! Redirecting...");
+      setMessage("Signup successful! Please verify your email now.");
       setTimeout(() => {
         window.location.href = "/";
       }, 2000);
     }
   }
-  console.log(isSignup);
 
   return (
     <div className="flex items-center justify-center h-screen">
